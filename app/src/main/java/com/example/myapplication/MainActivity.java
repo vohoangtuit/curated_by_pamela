@@ -31,19 +31,43 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        // Init AdMob
 
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        _init();
+
+    }
+    void _init(){
         urlEditText = findViewById(R.id.editTextUrl);
         webView = findViewById(R.id.webView);
         backButton = findViewById(R.id.backButton);
         goButton = findViewById(R.id.goButton);
 
         urlEditText.setText("https://curatedbypamela.com");
-
-        // Init AdMob
         MobileAds.initialize(this, initializationStatus -> {
         });
         loadInterstitialAd();
+        _initWebView();
+        _onClick();
+    }
+    void _onClick(){
+        goButton.setOnClickListener(v -> {
+            String enteredUrl = urlEditText.getText().toString().trim();
+            finalUrl = (enteredUrl.startsWith("http://") || enteredUrl.startsWith("https://"))
+                    ? enteredUrl : "https://" + enteredUrl;
+            webView.loadUrl(finalUrl); // ← Load trước
 
+        });
+        backButton.setOnClickListener(v -> {
+            setResult(Activity.RESULT_OK);
+            finish();
+        });
+    }
+    void _initWebView(){
         // WebView setup
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
@@ -53,13 +77,6 @@ public class MainActivity extends AppCompatActivity {
         webView.getSettings().setSupportMultipleWindows(true);
         webView.setWebViewClient(new WebViewClient());
 
-        goButton.setOnClickListener(v -> {
-            String enteredUrl = urlEditText.getText().toString().trim();
-            finalUrl = (enteredUrl.startsWith("http://") || enteredUrl.startsWith("https://"))
-                    ? enteredUrl : "https://" + enteredUrl;
-            webView.loadUrl(finalUrl); // ← Load trước
-
-        });
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
@@ -87,10 +104,6 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(TAG, "Interstitial ad not ready after page load.");
                 }
             }
-        });
-        backButton.setOnClickListener(v -> {
-            setResult(Activity.RESULT_OK);
-            finish();
         });
     }
 

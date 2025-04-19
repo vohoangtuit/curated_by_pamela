@@ -3,23 +3,26 @@ package com.example.myapplication;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.RequestConfiguration;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.rewarded.RewardedAd;
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
-
 public class MainActivity extends AppCompatActivity {
 
     private EditText urlEditText;
@@ -29,9 +32,9 @@ public class MainActivity extends AppCompatActivity {
     private InterstitialAd mInterstitialAd;
     private RewardedAd mRewardedAd;
 
-    private static final String TAG = "MainActivity";
     private String finalUrl = "";
     private String pendingUrl = null;
+    private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,8 +56,12 @@ public class MainActivity extends AppCompatActivity {
 
         urlEditText.setText("https://curatedbypamela.com");
 
+        // Khởi tạo Google Mobile Ads
         MobileAds.initialize(this, initializationStatus -> {});
-        loadRewardedAd(); // Load sẵn rewarded ad
+
+        // Load ads trước
+        loadInterstitialAd();
+        loadRewardedAd();
 
         _initWebView();
         _onClick();
@@ -66,6 +73,9 @@ public class MainActivity extends AppCompatActivity {
             finalUrl = (enteredUrl.startsWith("http://") || enteredUrl.startsWith("https://"))
                     ? enteredUrl : "https://" + enteredUrl;
             webView.loadUrl(finalUrl);
+
+            // Load lại Interstitial cho lần sau
+         //   loadInterstitialAd();
         });
 
         backButton.setOnClickListener(v -> {
@@ -87,11 +97,27 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                Log.d(TAG, "Page loaded: " + url);
+                super.onPageFinished(view, url);
+                Log.d(TAG, "Page finished: " + url);
 
-                // Khi trang chính (từ GO button) load xong thì hiển thị interstitial ad
-                if (url.equals(finalUrl)) {
-                    loadInterstitialAd(); // Load và show sau khi load xong
+                if (mInterstitialAd != null) {
+                    mInterstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {
+                        @Override
+                        public void onAdDismissedFullScreenContent() {
+                            Log.d(TAG, "Ad dismissed.");
+                            mInterstitialAd = null;
+                            loadInterstitialAd(); // Load ad mới
+                        }
+
+                        @Override
+                        public void onAdFailedToShowFullScreenContent(com.google.android.gms.ads.AdError adError) {
+                            Log.d(TAG, "Ad failed to show: " + adError.getMessage());
+                        }
+                    });
+
+                    mInterstitialAd.show(MainActivity.this);
+                } else {
+                    Log.d(TAG, "Interstitial ad not ready after page load.");
                 }
             }
 
@@ -99,12 +125,8 @@ public class MainActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 Log.d(TAG, "User clicked: " + url);
 
-                if (url.equals(finalUrl)) {
-                    // Nếu là link gốc đã load rồi thì không cần show rewarded
-                    return false;
-                }
+                if (url.equals(finalUrl)) return false;
 
-                // Link khác → show rewarded ad
                 if (mRewardedAd != null) {
                     pendingUrl = url;
 
@@ -113,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onAdDismissedFullScreenContent() {
                             Log.d(TAG, "Rewarded Ad dismissed.");
                             mRewardedAd = null;
-                            loadRewardedAd(); // Load ad tiếp theo
+                            loadRewardedAd();
 
                             if (pendingUrl != null) {
                                 webView.loadUrl(pendingUrl);
@@ -124,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onAdFailedToShowFullScreenContent(com.google.android.gms.ads.AdError adError) {
                             Log.d(TAG, "Rewarded Ad failed to show.");
-                            webView.loadUrl(url);
+                            webView.loadUrl(url); // Load trực tiếp nếu lỗi
                         }
                     });
 
@@ -132,10 +154,11 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "User earned reward.");
                     });
 
-                    return true; // Ngăn WebView load link ngay
+                    return true; // Ngăn load trực tiếp
+                } else {
+                    loadRewardedAd(); // Load lại nếu chưa có
+                    return false;
                 }
-
-                return false; // Không có ad → vẫn load link bình thường
             }
         });
     }
@@ -144,29 +167,19 @@ public class MainActivity extends AppCompatActivity {
         AdRequest adRequest = new AdRequest.Builder().build();
 
         InterstitialAd.load(this,
-                "ca-app-pub-7104190631117613/8953560665",
+                "ca-app-pub-7104190631117613/8953560665", // Test ID
                 adRequest,
                 new InterstitialAdLoadCallback() {
                     @Override
                     public void onAdLoaded(InterstitialAd ad) {
                         mInterstitialAd = ad;
                         Log.d(TAG, "Interstitial ad loaded.");
-
-                        mInterstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {
-                            @Override
-                            public void onAdDismissedFullScreenContent() {
-                                Log.d(TAG, "Interstitial Ad dismissed.");
-                                mInterstitialAd = null;
-                            }
-                        });
-
-                        mInterstitialAd.show(MainActivity.this);
                     }
 
                     @Override
                     public void onAdFailedToLoad(LoadAdError adError) {
                         mInterstitialAd = null;
-                        Log.d(TAG, "Interstitial ad failed: " + adError.getMessage());
+                        Log.d(TAG, "Failed to load interstitial ad: " + adError.getMessage());
                     }
                 });
     }
@@ -175,7 +188,7 @@ public class MainActivity extends AppCompatActivity {
         AdRequest adRequest = new AdRequest.Builder().build();
 
         RewardedAd.load(this,
-                "ca-app-pub-7104190631117613/4481463610",
+                "ca-app-pub-7104190631117613/9836866103", // Test ID
                 adRequest,
                 new RewardedAdLoadCallback() {
                     @Override
@@ -186,8 +199,8 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onAdFailedToLoad(LoadAdError adError) {
+                        Log.d(TAG, "Failed to load rewarded ad: " + adError.getMessage());
                         mRewardedAd = null;
-                        Log.d(TAG, "Rewarded ad failed: " + adError.getMessage());
                     }
                 });
     }

@@ -43,11 +43,11 @@
         android:layout_weight="1"
         android:layout_marginTop="8dp" />
 
-<!--    <com.google.android.gms.ads.AdView-->
-<!--        android:id="@+id/adView"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        ads:adSize="BANNER"-->
-<!--        ads:adUnitId="@string/ads2" /> &lt;!&ndash; ID test &ndash;&gt;-->
+    <com.google.android.gms.ads.AdView
+        android:id="@+id/adView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        ads:adSize="BANNER"
+        ads:adUnitId="@string/ad_banner" /> <!-- ID test -->
 
 </LinearLayout>

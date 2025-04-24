@@ -15,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.RequestConfiguration;
@@ -28,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
     private EditText urlEditText;
     private WebView webView;
     private Button backButton, goButton;
+    private AdView adView;
+
 
     private InterstitialAd mInterstitialAd;
     private RewardedAd mRewardedAd;
@@ -53,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webView);
         backButton = findViewById(R.id.backButton);
         goButton = findViewById(R.id.goButton);
-
+        adView = findViewById(R.id.adView);
         urlEditText.setText("https://curatedbypamela.com");
 
         // Khởi tạo Google Mobile Ads
@@ -62,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
         // Load ads trước
         loadInterstitialAd();
         loadRewardedAd();
-
+        _loadBannerAd();
         _initWebView();
         _onClick();
     }
@@ -203,5 +206,10 @@ public class MainActivity extends AppCompatActivity {
                         mRewardedAd = null;
                     }
                 });
+    }
+
+    private void _loadBannerAd() {
+        AdRequest adRequest = new AdRequest.Builder().build();
+        adView.loadAd(adRequest);
     }
 }
